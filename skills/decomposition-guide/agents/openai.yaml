@@ -1,0 +1,6 @@
+interface:
+  display_name: "Decomposition Guide"
+  short_description: "Task decomposition principles, slicing strategies, and granularity criteria"
+
+policy:
+  allow_implicit_invocation: true

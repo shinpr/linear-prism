@@ -1,0 +1,8 @@
+{
+  "name": "linear-prism",
+  "description": "Decomposes requirements into Linear-ready tasks with interactive quality gates and dependency mapping",
+  "version": "0.1.0",
+  "author": {
+    "name": "shinpr"
+  }
+}

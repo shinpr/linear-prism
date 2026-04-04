@@ -1,0 +1,16 @@
+{
+  "name": "linear-prism",
+  "owner": {
+    "name": "shinpr"
+  },
+  "metadata": {
+    "description": "Decompose requirements into Linear-ready tasks with dependency graphs and Design Doc boundaries"
+  },
+  "plugins": [
+    {
+      "name": "linear-prism",
+      "source": "./",
+      "description": "Decompose requirements into Linear-ready tasks with dependency graphs and Design Doc boundaries"
+    }
+  ]
+}
