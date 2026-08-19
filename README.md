@@ -8,61 +8,47 @@
 [![Codex CLI](https://img.shields.io/badge/Codex%20CLI-Compatible-10a37f)](https://developers.openai.com/codex/cli)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 
-**Decompose requirements into implementation-ready tasks and register them in [Linear](https://linear.app)** — through interactive dialog, with dependency graphs and Design Doc boundaries.
+**Turn a Linear issue or requirement document into a small set of independently verifiable tasks, then register the approved result in [Linear](https://linear.app).** linear-prism reads the repository to understand where the work belongs, asks only when a product decision would change the task boundaries, and records actual blocking relationships.
 
 ## Why
 
-Task decomposition is the bottleneck in agentic development. Get the boundaries wrong and every downstream agent — design, implementation, review — works against a flawed plan. The damage compounds silently because each agent operates in its own context.
+Requirements describe the desired behavior, but often not where the work belongs or which steps truly block others. Splitting them mechanically can create layer-by-layer tasks, speculative prerequisites, and questions the codebase could answer.
 
-Common failure modes:
-- **Vague input goes unquestioned** — the tool guesses instead of asking, producing tasks that look reasonable but miss critical boundaries
-- **Granularity is inconsistent** — some tasks are too large to design in one pass, others are too small to verify independently
-- **Dependencies stay implicit** — teams discover blocking relationships during implementation, not during planning
-- **Decisions made in conversation are lost** — the person who broke down the work remembers the trade-offs, but the issue tracker doesn't
-
-linear-prism addresses these by running an interactive quality gate before decomposition, structuring each task with explicit assumptions, key decisions, and Design Doc boundaries, and registering everything in Linear where progress is visible to the whole team.
+linear-prism reads the requirement and repository together. It keeps work in one task when the outcome can be completed and verified together, separates independently valuable outcomes and genuine shared prerequisites, and records the approved result in Linear. A person or coding agent can pick up each issue without reconstructing the original conversation.
 
 ## What It Looks Like
 
 **Input**: A one-line Linear issue — "Improve image generation performance"
 
 ```
-Quality Gate:
-  Objective clarity: pass
-  Service scope:     pass (inferred from codebase)
-  Testability:       fail — no measurable target
-  Completeness:      fail — cache strategy undefined
+Outcome and Scope Analysis:
+  Objective:    needs input — "performance" has no observable target
+  Scope:        ready (supported by repository evidence)
+  Verification: needs input — success cannot yet be measured
 
-→ Blocks decomposition. Asks:
-  1. What is your latency target?
-  2. Cache prompt results, generated images, or both?
-  3. In-memory only, or persistent across restarts?
+Question:
+  What user-visible operation and measurable target define success?
 ```
 
-After dialog, produces 5 tasks with dependency graph:
+After the user confirms "reduce P95 image-generation latency by 30% without changing the response contract," the repository shows that one component owns the change, so linear-prism keeps it as one task:
 
 ```
-T1 [shared_prerequisite] — Pipeline timing instrumentation
-T2 [shared_prerequisite] — Generic in-memory cache
-T3 [value_unit]          — Prompt enhancement cache    (depends: T2)
-T4 [value_unit]          — Generated image cache       (depends: T2)
-T5 [value_unit]          — Cache config via env vars   (depends: T2)
+T1 [value_unit] — Meet the P95 generation-latency target
 ```
 
-Each issue in Linear includes the goal, affected services, Design Doc scope, assumptions, and key decisions from the dialog — so the person (or agent) picking up the task has the full context.
+The registered issue includes the latency target, responsible service, unchanged response contract, and observable completion condition. Cache choice and persistence remain downstream design decisions instead of becoming extra tasks or user questions.
 
-**Input**: A detailed PRD with P0/P1 priorities
+**Input**: A requirement document with two batch operations that share a contract
 
 ```
-Quality Gate: all pass + 4 clarification questions about shared components
+Outcome and verification boundary: ready
 
-→ Hybrid strategy: extract shared batch execution engine,
-  then vertical slice per feature
+→ Hybrid strategy: the shared request/result contract must stabilize before
+  either value unit can be completed and verified; each operation then proceeds vertically
 
-T1 [shared_prerequisite] — Batch types + execution engine
+T1 [shared_prerequisite] — Establish the shared batch request/result contract
 T2 [value_unit]          — batch_generate tool          (depends: T1)
-T3 [value_unit]          — Progress reporting            (depends: T1, T2)
-T4 [value_unit]          — batch_edit tool               (depends: T1)
+T3 [value_unit]          — batch_edit tool               (depends: T1)
 ```
 
 ---
@@ -111,40 +97,40 @@ $recipe-decompose docs/prd.md
 ```
 Input (Linear issue URL or PRD file)
     │
-Round 1: Quality Gate
+Round 1: Outcome and Scope Analysis
     ├── Fetch and analyze requirements
-    ├── Assess: objective clarity, service scope, testability, completeness
-    └── Block → ask specific questions, or proceed with clarifications
+    ├── Inspect repository evidence for responsibility boundaries
+    └── Ask only for missing user-owned outcome or scope decisions
     │
 Round 2: Decomposition
     ├── Select slicing strategy (vertical / horizontal / hybrid)
-    │   based on feature independence and shared dependency count
-    ├── Extract shared prerequisites
-    ├── Produce typed tasks with Design Doc boundaries per service
+    │   from independent outcomes and real blocking dependencies
+    ├── Extract shared boundaries only when needed before
+    │   their earliest dependent task can complete and be verified
+    ├── Produce typed tasks with service responsibility scopes
     ├── Build dependency graph and coverage map
-    └── User review: approve / adjust / redo (nothing registers without approval)
+    └── User review: approve or describe the desired change (nothing registers without approval)
     │
 Round 3: Registration
     ├── Create parent issue (PRD input) or use source issue (Linear input)
     ├── Register sub-issues with blocking relations
-    └── Fallback: Markdown drafts if Linear MCP unavailable
+    └── Stop if the required Linear connection is unavailable
 ```
 
 ### Task Types
 
 | Type | Purpose | Example |
 |------|---------|---------|
-| `value_unit` | One coherent deliverable with independent acceptance criteria | "User can submit batch image generation request" |
-| `shared_prerequisite` | Foundation needed by 2+ later tasks at a shared boundary | "Implement generic cache with TTL and LRU eviction" |
-| `adr` | Technical decision that spans multiple tasks | "Select message queue technology" |
+| `value_unit` | One coherent outcome with an independently observable completion condition | "User can submit batch image generation request" |
+| `shared_prerequisite` | Shared boundary required before its earliest dependent value unit can complete and be verified | "Establish shared batch request/result contract" |
 
 ### What Goes Into Each Issue
 
-- **Goal**: What is true after completion
-- **Design Doc Units**: Per-service scope — ready for downstream design tools
+- **Goal**: The observable condition that proves the task complete
+- **Service Scopes**: Per-service implementation responsibility without prescribing document creation
 - **Dependencies**: Blocking relations, not just comments
 - **Assumptions**: What this task takes for granted (so the implementer can verify)
-- **Key Decisions**: Trade-offs decided during dialog (so they survive context switches)
+- **Key Decisions**: User-owned outcome and scope decisions from dialog
 
 ---
 
@@ -179,11 +165,11 @@ Locally modified files are preserved during updates.
 
 ```
 skills/
-├── recipe-decompose/           Orchestrator (3-round dialog)
+├── recipe-decompose/           Orchestrator (analysis, review, registration)
 │   ├── SKILL.md
 │   ├── agents/openai.yaml      Codex: invocation policy + MCP dependency
 │   └── references/
-│       ├── analyze.md          Round 1: quality gate
+│       ├── analyze.md          Round 1: outcome and scope analysis
 │       ├── plan.md             Round 2: decomposition + review
 │       └── register.md         Round 3: Linear registration
 └── decomposition-guide/        Knowledge skill (loaded by agent)
@@ -191,7 +177,7 @@ skills/
     └── agents/openai.yaml
 
 agents/
-└── task-decomposer-linear.md   Claude Code agent (analyze/decompose/revise/register_draft)
+└── task-decomposer-linear.md   Claude Code agent (analyze/decompose/revise)
 
 .codex/agents/
 └── task-decomposer-linear.toml Codex agent (same logic, TOML format)
@@ -201,9 +187,9 @@ agents/
 
 ## What Happens After Decomposition
 
-Each registered issue contains enough structured context — goal, Design Doc scope, assumptions, key decisions — for an LLM to pick it up and start design or implementation without re-asking the questions that were already answered during decomposition.
+Each registered issue includes its completion condition, responsibility scope, assumptions, and user decisions. A person or coding agent can start the appropriate design or implementation work without reconstructing the original conversation. Whether that work needs an ADR or Design Doc remains a downstream decision based on confirmed implementation scope and repository evidence.
 
-This means the issues work as inputs for any downstream workflow, whether human or agentic. Linear's [Codex integration](https://linear.app/integrations/codex) lets you mention `@Codex` on an issue to kick off a cloud agent directly from the task.
+With Linear's [Codex integration](https://linear.app/integrations/codex), mention `@Codex` on an issue to start a cloud agent directly from the task.
 
 ## License
 

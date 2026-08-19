@@ -5,7 +5,7 @@
 Check Linear MCP connection by invoking `list_teams`.
 
 - If successful: proceed with registration (Step 2).
-- If failed: switch to manual-registration draft mode (Step 6).
+- If failed: report the missing required dependency and stop without creating or drafting issues.
 
 ## Step 2: Determine Target Context
 
@@ -38,13 +38,13 @@ For each task in `$FINAL_TASKS`, in dependency order:
    - **Parent**: `$PARENT_ISSUE_ID`
    - **Description**: Markdown formatted:
      ```
-     **Goal**: goal text
+     **Goal**: observable condition that proves task completion
 
      **Task Type**: task_type
      **Affected Services**: comma-separated list
 
-     **Design Doc Units**:
-     - service: doc_scope
+     **Service Scopes**:
+     - service: scope
 
      **Dependencies**: depends_on list with task IDs and titles
      **Dependency Notes**:
@@ -64,9 +64,8 @@ For each task in `$FINAL_TASKS`, in dependency order:
 
 2. Record the returned issue URL and identifier.
 
-3. After all issues are created, set blocking relations and add dependency comments:
+3. After all issues are created, set blocking relations:
    - For each dependency edge, set a blocking relation on the dependent issue (using the `blockedBy` parameter) pointing to the dependency-source issue.
-   - Then add a comment on the dependent issue: "Blocked by [blocking_issue_id] ([blocking_task_title]): reason"
    - `blocking_issue_id` refers to the Linear issue identifier of the dependency-source task, not the parent issue.
 
 ## Step 5: Present Registration Results
@@ -82,28 +81,6 @@ Display a summary table:
 
 State: "Registration complete. X issues created in [team name] under [parent issue identifier]."
 
-## Step 6: Manual Registration Draft (Fallback)
-
-If Linear MCP is unavailable, invoke the task-decomposer-linear agent in `register_draft` mode:
-
-```
-subagent_type: linear-prism:task-decomposer-linear
-description: "Generate registration drafts"
-prompt: |
-  mode: register_draft
-  source: |
-    $FINAL_TASKS
-  context: |
-    input_type: $INPUT_TYPE
-    objective: $ANALYSIS.objective
-```
-
-Where `$INPUT_TYPE` is `file` when the original input was a PRD/requirement document, or `linear_issue` when it was a Linear URL.
-
-Present the Markdown drafts to the user:
-- If `$INPUT_TYPE` is `file`: "Linear MCP is unavailable. Use these drafts to create issues manually. The first entry is the parent issue; subsequent entries are sub-tasks."
-- If `$INPUT_TYPE` is `linear_issue`: "Linear MCP is unavailable. Use these drafts to create sub-issues under $SOURCE_ISSUE_ID manually."
-
-## Step 7: Stop
+## Step 6: Stop
 
 Registration is the final step. The orchestrator stops here.

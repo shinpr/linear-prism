@@ -4,13 +4,13 @@
     "name": "shinpr"
   },
   "metadata": {
-    "description": "Decompose requirements into Linear-ready tasks with dependency graphs and Design Doc boundaries"
+    "description": "Uses repository evidence to decompose requirements into the fewest implementation-ready value units, then registers approved tasks in Linear"
   },
   "plugins": [
     {
       "name": "linear-prism",
       "source": "./",
-      "description": "Decompose requirements into Linear-ready tasks with dependency graphs and Design Doc boundaries"
+      "description": "Uses repository evidence to decompose requirements into the fewest implementation-ready value units, then registers approved tasks in Linear"
     }
   ]
 }
