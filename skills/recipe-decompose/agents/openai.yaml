@@ -1,6 +1,6 @@
 interface:
   display_name: "Task Decompose"
-  short_description: "Decompose requirements into Linear-ready tasks with dependency graphs"
+  short_description: "Create the fewest Linear-ready value units with real dependencies"
 
 policy:
   allow_implicit_invocation: false

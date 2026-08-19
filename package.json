@@ -1,7 +1,7 @@
 {
   "name": "linear-prism",
-  "version": "0.1.0",
-  "description": "Task decomposition plugin for Linear — decomposes requirements into implementation-ready tasks with dependency graphs and Design Doc boundaries",
+  "version": "0.2.0",
+  "description": "Uses repository evidence to decompose requirements into the fewest implementation-ready value units, then registers approved tasks in Linear",
   "license": "MIT",
   "author": "Shinsuke Kagawa",
   "repository": {
@@ -25,7 +25,7 @@
     "agent-skills",
     "mcp",
     "agentic-coding",
-    "project-management"
+    "requirements-analysis"
   ],
   "homepage": "https://github.com/shinpr/linear-prism#readme",
   "engines": {

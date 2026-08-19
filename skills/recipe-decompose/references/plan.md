@@ -33,15 +33,15 @@ Display tasks in dependency order as a numbered list:
 
 ```
 T1 [shared_prerequisite] — Title
-   Goal: what is true after completion
+   Goal: observable condition that proves completion
    Services: service-a, service-b
-   Design Docs: service-a (scope), service-b (scope)
+   Service Scopes: service-a (scope), service-b (scope)
    Depends on: (none)
 
 T2 [value_unit] — Title
-   Goal: what is true after completion
+   Goal: observable condition that proves completion
    Services: service-a
-   Design Docs: service-a (scope)
+   Service Scopes: service-a (scope)
    Depends on: T1
    Notes: Requires shared contract from T1
 ```
@@ -60,28 +60,21 @@ T3 → T4 (data dependency)
 
 Using the `source_requirements` and `coverage_map` from the decomposition result:
 
-- List each requirement and which tasks cover it.
+- List each current in-scope desired behavior and which tasks cover it.
 - Flag any requirement where `covered_by` is empty.
 - State: "X/Y requirements covered. Z shared prerequisites extracted."
 - If assumptions were made, list them under "Assumptions".
-- If `confidence` is `medium`, list `open_questions` and ask whether the user can resolve them before approving.
-- If `confidence` is absent, treat as `high`.
 
 ## Step 3: Collect User Feedback
 
-Ask via AskUserQuestion:
-
-"Review the task breakdown above. Options:
-- **approve**: Proceed to Linear registration.
-- **adjust**: Describe what to change (split, merge, reorder, add, remove tasks).
-- **redo**: Provide new context and regenerate the entire decomposition."
+Ask via AskUserQuestion: "Review the current task breakdown. Approve it for Linear registration, or describe the outcome you want changed."
 
 ## Step 4: Handle Response
 
 ### If `approve`:
 Record `$FINAL_TASKS` = `$DECOMPOSITION` and proceed to Round 3.
 
-### If `adjust`:
+### If the user requests a change:
 Invoke the task-decomposer-linear agent in `revise` mode:
 
 ```
@@ -101,15 +94,13 @@ If `$REVISION.status` is `ok`:
 - Replace `$DECOMPOSITION` with `$REVISION`.
 - Present the updated task list and return to Step 3.
 
-If `$REVISION.status` is `invalid`:
-- Present the validation errors and recommended fixes to the user.
-- Ask: "The adjustment produced these issues. Approve the current list as-is, provide different instructions, or redo the full decomposition?"
-- Handle the response as `approve`, `adjust` (new cycle), or `redo`.
+If `$REVISION.status` is `needs_user_decision`:
+- Preserve the returned task list as the current state.
+- Present each conflicting adjustment with the exact requirement or invariant it conflicts with.
+- Ask only for the decision required to resolve or withdraw that adjustment.
+- Re-invoke `revise` only after the user supplies new information that can change the conflict.
 
-Maximum 3 adjustment cycles. After the third, proceed with the current list and note unresolved issues.
-
-### If `redo`:
-Collect the new context, return to Step 1 with the updated context appended to `$CLARIFICATIONS`.
+When a repeated instruction produces the same conflict with no new evidence, report the unchanged conflict and wait. Repetition never authorizes progression. Only an explicit `approve` response for the current valid task list sets `$FINAL_TASKS`.
 
 ## Step 5: Transition to Round 3
 

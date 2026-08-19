@@ -1,11 +1,11 @@
 ---
 name: decomposition-guide
-description: Guides task boundary decisions when splitting requirements into implementation-ready units. Use when determining task size, dependencies, or design doc scope.
+description: Guides task boundary decisions when splitting requirements into implementation-ready value units. Use when determining task size, responsibility scope, or real blocking dependencies.
 ---
 
 # Overview
 
-Defines criteria for splitting requirements into implementation tasks with explicit Design Doc boundaries and dependency graphs. Used by the task-decomposer-linear agent during decompose and revise modes.
+Defines criteria for independently verifiable implementation tasks with explicit responsibility scopes and real dependency edges. Used by the task-decomposer-linear agent during decompose and revise modes.
 
 # Task Decomposition Principles
 
@@ -17,8 +17,8 @@ A value-unit task delivers one coherent, verifiable outcome:
 
 Each value-unit task satisfies all of the following:
 1. Produces a deployable or mergeable increment when completed.
-2. Maps to one or more Design Documents, each scoped to a single service boundary.
-3. Has explicit entry criteria (dependencies resolved) and exit criteria (verification passed).
+2. Has an independently observable completion condition.
+3. Depends only on deliverables that must exist before its outcome can be completed or verified.
 
 ## Task Types
 
@@ -26,76 +26,47 @@ Each value-unit task satisfies all of the following:
 |------|-------------|---------|
 | `value_unit` | Delivers one coherent user-facing or system-facing value | "User can submit review from Word add-in" |
 | `shared_prerequisite` | Two or more later tasks depend on the same missing foundation at a shared boundary | "Define shared API contract for review requests" |
-| `adr` | A technical decision spans multiple tasks and lacks a recorded resolution | "Select message queue technology for async processing" |
 
 ### Shared Prerequisite Extraction
 
 Create a `shared_prerequisite` task only when ALL conditions hold:
 1. Two or more later value-unit tasks depend on the same missing piece.
 2. The piece changes a shared boundary (contract, interface, infrastructure path, test harness).
-3. Leaving it inside a later task forces that task to carry provisional design content or provisional dependencies.
+3. The boundary must stabilize before the earliest dependent value unit can complete and verify its outcome.
 
-When the split is ambiguous, keep the work inside the first affected value-unit task and record the uncertainty in `dependency_notes`.
+Limit the prerequisite to what the earliest executable value-unit task needs. When the split is ambiguous, keep the work inside that value-unit task and record the uncertainty in `dependency_notes`.
 
 ## Slicing Strategy
 
 ### Vertical Slice (Feature-by-Feature)
 
-Select when:
-- Features share fewer than 2 data models.
-- Each feature is independently deliverable and testable.
-- Changes touch 3 or more layers per feature.
-
-Each task delivers one end-to-end feature across all affected layers.
+Use by default when each task can deliver and verify one outcome across its affected layers.
 
 ### Horizontal Slice (Layer-by-Layer)
 
-Select when:
-- Three or more features depend on a common foundation layer.
-- The foundation requires stability verification before dependent work begins.
-- Layer boundaries align with team ownership or deployment boundaries.
-
-Foundation tasks precede dependent feature tasks in the dependency graph.
+Use only when a shared foundation is an independently verifiable deliverable that must stabilize before every dependent value unit can execute or verify its outcome.
 
 ### Hybrid
 
-Select when:
-- Some features need foundation work while others are independent.
-- Requirements are partially unclear and the approach may shift per phase.
-
-Combine: extract shared foundation as `shared_prerequisite`, then slice remaining features vertically.
+Use when shared prerequisite work is required and the remaining outcomes can be delivered as vertical value units.
 
 ## Granularity Criteria
 
-### Primary Indicators (use at decomposition time)
-
-A well-sized task satisfies all of the following:
-- Scoped to a single service boundary or a clearly defined cross-service interaction.
-- Has at least one independently verifiable acceptance criterion.
-- Has a dependency depth of at most 2 (depends on at most 2 sequential predecessors).
+A well-sized task owns one coherent outcome, names its responsibility scope, and has an independently observable completion condition.
 
 ### Too Large (Split Further)
 
 Indicators:
-- Spans multiple unrelated service boundaries with no shared contract justifying the grouping.
-- Requires two or more independent Design Documents for the same service.
-- Contains both infrastructure setup and feature logic that serve different purposes.
-- Acceptance criteria mix unrelated concerns (e.g., "API works AND UI renders AND migration completes").
+- Contains independently valuable outcomes that can complete and be verified separately.
+- Spans unrelated responsibility boundaries whose work has independently completable outcomes.
+- Combines a prerequisite with later value work even though each is independently deliverable.
 
 ### Too Small (Merge Upward)
 
 Indicators:
-- No independent acceptance criterion (only verifiable as part of a parent task).
-- A helper or utility that exists only to serve one parent task.
-- Configuration change that is meaningless without its parent feature.
-
-### Supplementary Indicator (use when implementation scope is known)
-
-Estimated file count can inform sizing when concrete enough to assess:
-- 1-5 files: typical well-sized task.
-- 6+ files across unrelated concerns: likely too large.
-
-This indicator is unreliable at PRD or early requirement stage. Prefer the primary indicators above.
+- Its completion is observable only through a parent task's acceptance criterion.
+- Its helper or utility has one parent-task consumer.
+- Its configuration gains meaning only with its parent feature.
 
 ## Dependency Mapping
 
@@ -105,22 +76,18 @@ This indicator is unreliable at PRD or early requirement stage. Prefer the prima
 |------|-------------|-----------|
 | **Data dependency** | Task B requires a schema, contract, or interface from Task A | A completes before B starts |
 | **Build dependency** | Task B requires compiled output or deployed artifact from Task A | A completes before B starts |
-| **Knowledge dependency** | Task B benefits from insights in Task A but can proceed with assumptions | A recommended before B; B records assumptions if proceeding |
-| **ADR dependency** | Task B implements a design that depends on an unresolved technical decision | ADR task completes before B's Design Doc |
+| **Knowledge relationship** | Task B benefits from insight from Task A but can proceed with a recorded assumption | Record as an assumption rather than a dependency edge |
 
 ### Cross-Service Dependencies
 
 When a task spans multiple services:
 - Record each service in `affected_services`.
-- Map each service to its own Design Doc in `design_doc_units`.
-- Record inter-service sequencing in `dependency_notes` (which service boundary must stabilize first).
+- Map each service's owned part of the outcome in `service_scopes`.
+- Record inter-service sequencing in `dependency_notes` only when one service deliverable must stabilize before another can execute or verify.
 
-## Design Doc Boundary Rules
+## Documentation Boundary
 
-One Design Doc covers one service's scope within one task:
-- **Scope**: The subset of the task's changes that occur within that service.
-- **Boundary**: Defined by the service's API surface, data store, or deployment unit.
-- **Cross-reference**: When two Design Docs in the same task share a contract, both reference the contract definition; only one owns it.
+This decomposition records implementation responsibility. The downstream design workflow decides the documentation path because ADR and Design Doc necessity require confirmed implementation scope and repository evidence. Treat an existing approved ADR or Design Doc as governing context.
 
 ## Output Field Reference
 
@@ -129,12 +96,12 @@ Every task entry uses this fixed field order:
 | Field | Required | Description |
 |-------|----------|-------------|
 | `task_id` | Yes | Sequential identifier (T1, T2, ...) |
-| `task_type` | Yes | `value_unit`, `shared_prerequisite`, or `adr` |
+| `task_type` | Yes | `value_unit` or `shared_prerequisite` |
 | `title` | Yes | Imperative phrase describing the deliverable |
-| `goal` | Yes | One sentence: what is true after this task completes |
+| `goal` | Yes | One sentence stating the observable condition that proves this task complete |
 | `affected_services` | Yes | List of service names touched by this task |
-| `design_doc_units` | Yes | List of {service, doc_scope} pairs |
+| `service_scopes` | Yes | List of {service, scope} pairs describing implementation responsibility |
 | `depends_on` | Yes | List of task_ids (empty list if none) |
 | `dependency_notes` | Yes | List of strings explaining each dependency reason |
-| `assumptions` | Yes | List of assumptions specific to this task (empty list if none). Each assumption belongs to exactly one task. |
-| `key_decisions` | Yes | List of decisions from dialog that constrain this task (empty list if none). Each decision belongs to exactly one task. |
+| `assumptions` | Yes | List of unresolved conditions that materially constrain this task (empty list if none) |
+| `key_decisions` | Yes | List of user decisions that materially constrain this task (empty list if none) |

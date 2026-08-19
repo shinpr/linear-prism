@@ -1,4 +1,4 @@
-# Round 1: Input Analysis and Quality Gate
+# Round 1: Outcome and Scope Analysis
 
 ## Step 1: Fetch Input
 
@@ -28,42 +28,28 @@ prompt: |
 
 Store the result as `$ANALYSIS`.
 
-## Step 3: Present Findings to User
+## Step 3: Route the Result
 
-Present the analysis as plain text (not AskUserQuestion). Include:
+Keep observed source or repository facts separate from inferred implications. Include:
 
 1. **Extracted objective** — one sentence summary of what the requirement delivers.
 2. **Affected services** — list of identified services/components.
-3. **Quality assessment** — for each criterion (objective clarity, service scope, testability, completeness), state pass or fail with a brief explanation.
-4. **Issues found** — list blocking issues and clarification questions, if any.
+3. **Verification boundary** — the observable result that can prove the objective.
+4. **Assumptions** — only unresolved conditions that materially constrain task boundaries.
 
-### If `recommended_action` is `block`:
+### If `recommended_action` is `needs_input`:
 
-State: "The following issues prevent decomposition. Resolve them in the source document and re-run, or provide the missing information here."
+Present the observed evidence and its effect on the decomposition boundary. Ask only the returned questions whose answers require the user's product intent, scope decision, or exclusion.
 
-List each blocking issue. Wait for user response.
+Wait for the user response, preserve the original source, add the answer as clarification context, and re-invoke analysis.
 
-After the user provides information:
-- If the response resolves all blocking issues, incorporate the new context and re-invoke analysis to confirm resolution.
-- If issues remain, repeat the block message with remaining items.
-
-### If `recommended_action` is `clarify`:
-
-State: "The requirement is sufficient for decomposition, but these points affect task boundaries. Answering them improves decomposition accuracy."
-
-List each clarification question. Wait for user response.
-
-After the user responds:
-- Record the answers as `$CLARIFICATIONS` for Round 2.
-- Proceed to Round 2 regardless of whether all questions are answered (record unanswered items as assumptions).
+Repeat when the new answer leaves a different user-owned decision unresolved. When the same condition remains with unchanged information, report the exact missing decision and wait for new input.
 
 ### If `recommended_action` is `proceed`:
 
-State: "Requirement analysis complete. No blocking issues found."
+Present a compact analysis summary and proceed directly to Round 2 in the same invocation. The user's original decomposition request already authorizes this reversible step.
 
-Ask: "Proceed with decomposition? If you have additional context about services, dependencies, or priorities, share them now."
-
-Wait for user response. Record any additional context as `$CLARIFICATIONS`.
+Carry repository-local implementation choices, document routing, and reversible technical decisions as evidence or material uncertainty in `$ANALYSIS.assumptions` for the downstream design step.
 
 ## Step 4: Transition to Round 2
 
@@ -72,4 +58,4 @@ Collected data for Round 2:
 - `$INPUT_TYPE`: `file` (PRD/requirement document) or `linear_issue` (Linear URL) — determined in Step 1
 - `$SOURCE_ISSUE_ID`: Linear issue identifier of the source issue (only when `$INPUT_TYPE` is `linear_issue`)
 - `$ANALYSIS`: structured analysis result
-- `$CLARIFICATIONS`: user-provided answers and additional context (may be empty)
+- `$CLARIFICATIONS`: user-provided outcome or scope decisions (may be empty)
